@@ -1,0 +1,381 @@
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  .phone-wrap { display: flex; justify-content: center; padding: 16px 0; }
+  .phone { width: 390px; min-height: 844px; background: #0a0a0f; border-radius: 54px; border: 10px solid #1a1a24; position: relative; overflow: hidden; box-shadow: 0 0 0 1px #2a2a3a; font-family: var(--font-sans); }
+  .dynamic-island { width: 120px; height: 34px; background: #000; border-radius: 20px; position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 30; }
+  .screen { width: 100%; height: 100%; background: #0e0e1a; border-radius: 44px; overflow: hidden; position: relative; }
+  .status-bar { display: flex; justify-content: space-between; align-items: center; padding: 56px 24px 8px; }
+  .status-time { color: #fff; font-size: 15px; font-weight: 500; }
+  .status-icons { color: #fff; font-size: 12px; }
+
+  .main-view { position: absolute; inset: 0; display: flex; flex-direction: column; transition: opacity 0.3s; }
+  .main-view.hidden { opacity: 0; pointer-events: none; }
+
+  .header { padding: 4px 24px 12px; }
+  .trip-badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.08); border-radius: 20px; padding: 5px 12px; margin-bottom: 10px; }
+  .trip-badge span { color: #aaa; font-size: 11px; }
+  .header h1 { color: #fff; font-size: 26px; font-weight: 500; letter-spacing: -0.5px; }
+  .header p { color: #777; font-size: 12px; margin-top: 2px; }
+
+  .tab-row { display: flex; gap: 8px; padding: 0 16px 12px; overflow-x: auto; }
+  .tab-row::-webkit-scrollbar { display: none; }
+  .tab { padding: 7px 14px; border-radius: 20px; font-size: 12px; font-weight: 500; cursor: pointer; white-space: nowrap; border: 0.5px solid rgba(255,255,255,0.1); color: #777; background: transparent; transition: all 0.2s; }
+  .tab.active { background: #9980ff; color: #fff; border-color: #9980ff; }
+
+  .scroll-area { flex: 1; overflow-y: auto; padding: 0 14px 100px; }
+  .scroll-area::-webkit-scrollbar { display: none; }
+
+  .stop-card { display: flex; align-items: stretch; gap: 10px; margin-bottom: 6px; cursor: pointer; }
+  .stop-line { display: flex; flex-direction: column; align-items: center; width: 24px; flex-shrink: 0; padding-top: 14px; }
+  .stop-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .dot-hotel { background: #9980ff; }
+  .dot-food { background: #e07832; }
+  .dot-sight { background: #20b87a; }
+  .dot-museum { background: #4aa0e0; }
+  .dot-park { background: #50c060; }
+  .dot-end { background: #e05060; }
+  .stop-connector { width: 1.5px; flex: 1; background: rgba(255,255,255,0.08); margin-top: 4px; }
+  .stop-body { flex: 1; background: #161622; border-radius: 14px; padding: 10px 14px; border: 0.5px solid rgba(255,255,255,0.07); transition: all 0.15s; }
+  .stop-body:active { transform: scale(0.98); background: #1d1d2e; }
+  .stop-name { color: #fff; font-size: 13px; font-weight: 500; }
+  .stop-addr { color: #555; font-size: 11px; margin-top: 2px; }
+  .stop-tag { display: inline-block; font-size: 10px; border-radius: 6px; padding: 2px 8px; margin-top: 5px; }
+  .tag-hotel { background: rgba(153,128,255,0.15); color: #9980ff; }
+  .tag-food { background: rgba(220,120,50,0.15); color: #e07832; }
+  .tag-sight { background: rgba(30,180,120,0.15); color: #20b87a; }
+  .tag-museum { background: rgba(74,160,224,0.15); color: #4aa0e0; }
+  .tag-park { background: rgba(80,192,96,0.15); color: #50c060; }
+  .tag-ticket { background: rgba(255,100,100,0.15); color: #ff7070; }
+
+  .day-header { display: flex; align-items: center; gap: 10px; padding: 16px 4px 10px; }
+  .day-num { width: 32px; height: 32px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 500; flex-shrink: 0; }
+  .dh-3 { background: rgba(153,128,255,0.2); color: #9980ff; }
+  .dh-4 { background: rgba(220,120,50,0.2); color: #e07832; }
+  .dh-5 { background: rgba(74,160,224,0.2); color: #4aa0e0; }
+  .dh-6 { background: rgba(30,180,120,0.2); color: #20b87a; }
+  .day-info h3 { color: #fff; font-size: 14px; font-weight: 500; }
+  .day-info p { color: #666; font-size: 11px; }
+
+  .bottom-nav { position: absolute; bottom: 20px; left: 16px; right: 16px; background: rgba(22,22,34,0.95); border: 0.5px solid rgba(255,255,255,0.1); border-radius: 24px; padding: 12px 16px; display: flex; justify-content: space-around; z-index: 10; }
+  .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; }
+  .nav-icon { font-size: 16px; }
+  .nav-label { font-size: 10px; color: #555; }
+  .nav-item.active .nav-label { color: #9980ff; }
+
+  .detail-overlay { position: absolute; inset: 0; background: #0e0e1a; z-index: 20; transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); overflow-y: auto; border-radius: 44px; }
+  .detail-overlay.open { transform: translateX(0); }
+  .detail-overlay::-webkit-scrollbar { display: none; }
+  .detail-header { padding: 60px 20px 16px; display: flex; align-items: center; gap: 12px; }
+  .back-btn { width: 34px; height: 34px; border-radius: 50%; background: rgba(255,255,255,0.08); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .back-btn svg { width: 14px; height: 14px; fill: none; stroke: #fff; stroke-width: 2.5; }
+  .detail-title { color: #fff; font-size: 17px; font-weight: 500; }
+  .detail-sub { color: #666; font-size: 12px; margin-top: 2px; }
+  .detail-content { padding: 0 16px 40px; }
+
+  .boarding-card { background: #fff; border-radius: 16px; padding: 18px; margin-bottom: 10px; }
+  .bc-airline { color: #FF6C00; font-size: 12px; font-weight: 500; margin-bottom: 10px; }
+  .bc-route { display: flex; align-items: center; gap: 0; margin-bottom: 12px; }
+  .bc-airport { font-size: 26px; font-weight: 500; color: #000; letter-spacing: -1px; }
+  .bc-arrow { flex: 1; text-align: center; color: #bbb; font-size: 16px; }
+  .bc-row { display: flex; justify-content: space-between; margin-bottom: 6px; }
+  .bc-field { display: flex; flex-direction: column; }
+  .bc-fl { font-size: 9px; color: #999; }
+  .bc-fv { font-size: 13px; color: #000; font-weight: 500; }
+  .bc-div { border: none; border-top: 1px dashed #ddd; margin: 10px 0; }
+  .bc-seat { font-size: 34px; font-weight: 500; color: #000; }
+
+  .museum-card { background: #161622; border-radius: 14px; padding: 14px; margin-bottom: 10px; border: 0.5px solid rgba(255,255,255,0.07); }
+  .museum-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+  .museum-name { color: #fff; font-size: 14px; font-weight: 500; }
+  .museum-date { color: #777; font-size: 11px; }
+  .ticket-list { display: flex; flex-direction: column; gap: 5px; }
+  .ticket-item { display: flex; justify-content: space-between; align-items: center; padding: 7px 10px; background: rgba(255,255,255,0.04); border-radius: 8px; }
+  .ti-type { color: #ccc; font-size: 11px; }
+  .ti-time { color: #555; font-size: 10px; margin-top: 1px; }
+  .ti-badge { font-size: 10px; padding: 2px 7px; border-radius: 6px; }
+  .ti-adult { background: rgba(153,128,255,0.15); color: #9980ff; }
+  .ti-child { background: rgba(30,180,120,0.15); color: #20b87a; }
+  .ti-under4 { background: rgba(220,120,50,0.15); color: #e07832; }
+
+  .pnr-box { background: rgba(153,128,255,0.1); border: 0.5px solid rgba(153,128,255,0.3); border-radius: 12px; padding: 10px 14px; margin-bottom: 10px; }
+  .pnr-label { color: #9980ff; font-size: 10px; margin-bottom: 3px; }
+  .pnr-val { color: #fff; font-size: 17px; font-weight: 500; letter-spacing: 4px; }
+
+  .map-ph { background: #161622; border-radius: 14px; height: 110px; display: flex; align-items: center; justify-content: center; border: 0.5px solid rgba(255,255,255,0.07); margin-bottom: 10px; position: relative; overflow: hidden; }
+  .map-grid { position: absolute; inset: 0; opacity: 0.12; background-image: linear-gradient(rgba(153,128,255,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(153,128,255,0.6) 1px, transparent 1px); background-size: 18px 18px; }
+  .map-content { position: relative; z-index: 1; display: flex; align-items: center; gap: 8px; }
+  .map-content span:first-child { font-size: 20px; }
+  .map-label { color: #999; font-size: 12px; }
+
+  .info-box { border-radius: 12px; padding: 10px 14px; margin-bottom: 10px; }
+  .ib-purple { background: rgba(153,128,255,0.1); border: 0.5px solid rgba(153,128,255,0.2); }
+  .ib-blue { background: rgba(74,160,224,0.1); border: 0.5px solid rgba(74,160,224,0.2); }
+  .ib-orange { background: rgba(220,120,50,0.1); border: 0.5px solid rgba(220,120,50,0.2); }
+  .ib-green { background: rgba(30,180,120,0.1); border: 0.5px solid rgba(30,180,120,0.2); }
+  .ib-label { font-size: 10px; margin-bottom: 3px; }
+  .ib-text { color: #aaa; font-size: 11px; line-height: 1.5; }
+  .purple-text { color: #9980ff; }
+  .blue-text { color: #4aa0e0; }
+  .orange-text { color: #e07832; }
+  .green-text { color: #20b87a; }
+
+  @keyframes fadeUp { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .stop-card { animation: fadeUp 0.35s ease both; }
+</style>
+
+<div class="phone-wrap">
+  <div class="phone">
+    <div class="screen">
+      <div class="dynamic-island"></div>
+
+      <div class="main-view" id="mainView">
+        <div class="status-bar">
+          <span class="status-time">14:08</span>
+          <span class="status-icons">▲▲▲▲ LTE</span>
+        </div>
+        <div class="header">
+          <div class="trip-badge"><span>✈</span><span>3–6 Nisan 2026 · Londra</span></div>
+          <h1>Londra</h1>
+          <p>Ayanoglu Ailesi · 3 yolcu</p>
+        </div>
+        <div class="tab-row">
+          <div class="tab active" onclick="setTab(this,'all')">Tümü</div>
+          <div class="tab" onclick="setTab(this,'d3')">3 Nis</div>
+          <div class="tab" onclick="setTab(this,'d4')">4 Nis</div>
+          <div class="tab" onclick="setTab(this,'d5')">5 Nis</div>
+          <div class="tab" onclick="setTab(this,'d6')">6 Nis</div>
+          <div class="tab" onclick="setTab(this,'tickets')">Biletler</div>
+        </div>
+        <div class="scroll-area" id="scrollArea"></div>
+        <div class="bottom-nav">
+          <div class="nav-item active"><span class="nav-icon">🗓</span><span class="nav-label" style="color:#9980ff">Plan</span></div>
+          <div class="nav-item"><span class="nav-icon">🗺</span><span class="nav-label">Harita</span></div>
+          <div class="nav-item"><span class="nav-icon">🎫</span><span class="nav-label">Biletler</span></div>
+          <div class="nav-item"><span class="nav-icon">👤</span><span class="nav-label">Profil</span></div>
+        </div>
+      </div>
+
+      <div class="detail-overlay" id="detailFlight">
+        <div class="detail-header">
+          <button class="back-btn" onclick="closeDetail('detailFlight')"><svg viewBox="0 0 24 24"><polyline points="15,18 9,12 15,6"/></svg></button>
+          <div><div class="detail-title">Uçuş Biniş Kartları</div><div class="detail-sub">3 Nisan · PC 1161 SAW → STN</div></div>
+        </div>
+        <div class="detail-content">
+          <div class="pnr-box"><div class="pnr-label">PNR Kodu</div><div class="pnr-val">1KQLEK</div></div>
+          <div class="boarding-card">
+            <div class="bc-airline">✈ Pegasus · PC 1161 · 3 Nisan 2026</div>
+            <div class="bc-route"><div class="bc-airport">SAW</div><div class="bc-arrow">✈</div><div class="bc-airport">STN</div></div>
+            <div class="bc-row">
+              <div class="bc-field"><span class="bc-fl">Kalkış</span><span class="bc-fv">11:35</span></div>
+              <div class="bc-field"><span class="bc-fl">Varış</span><span class="bc-fv">13:35</span></div>
+              <div class="bc-field"><span class="bc-fl">Terminal</span><span class="bc-fv">Ana / T1</span></div>
+            </div>
+            <div class="bc-div"></div>
+            <div style="display:flex;justify-content:space-between;">
+              <div><div class="bc-fl">Yolcu</div><div class="bc-fv">EMRE AYANOGLU</div><div style="margin-top:6px"><div class="bc-fl">Koltuk</div><div class="bc-seat">9C</div></div></div>
+              <div style="text-align:right"><div class="bc-fl">Biniş</div><div class="bc-fv">10:50</div><div style="margin-top:4px"><div class="bc-fl">Kapı</div><div class="bc-fv">11:15</div><div style="margin-top:4px"><div class="bc-fl">Sıra / Grup</div><div class="bc-fv">9 · B</div></div></div></div>
+            </div>
+            <div style="margin-top:8px;font-size:10px;color:#aaa;">1 Kabin Bagajı · PDBG SEAT XBAG FLEX</div>
+          </div>
+          <div class="boarding-card">
+            <div class="bc-airline">✈ Pegasus · PC 1161 · 3 Nisan 2026</div>
+            <div class="bc-route"><div class="bc-airport">SAW</div><div class="bc-arrow">✈</div><div class="bc-airport">STN</div></div>
+            <div class="bc-div"></div>
+            <div style="display:flex;justify-content:space-between;">
+              <div><div class="bc-fl">Yolcu</div><div class="bc-fv">ZELIHA G. AYANOGLU</div><div style="margin-top:6px"><div class="bc-fl">Koltuk</div><div class="bc-seat">9B</div></div></div>
+              <div style="text-align:right"><div class="bc-fl">Biniş</div><div class="bc-fv">10:50</div><div style="margin-top:4px"><div class="bc-fl">Sıra / Grup</div><div class="bc-fv">8 · B</div></div></div>
+            </div>
+            <div style="margin-top:8px;font-size:10px;color:#aaa;">Kabin bagajı yok · SEAT FLEX</div>
+          </div>
+          <div class="boarding-card">
+            <div class="bc-airline">✈ Pegasus · PC 1161 · 3 Nisan 2026</div>
+            <div class="bc-route"><div class="bc-airport">SAW</div><div class="bc-arrow">✈</div><div class="bc-airport">STN</div></div>
+            <div class="bc-div"></div>
+            <div style="display:flex;justify-content:space-between;">
+              <div><div class="bc-fl">Yolcu</div><div class="bc-fv">CAN AYANOGLU</div><div style="margin-top:6px"><div class="bc-fl">Koltuk</div><div class="bc-seat">9A</div></div></div>
+              <div style="text-align:right"><div class="bc-fl">Biniş</div><div class="bc-fv">10:50</div><div style="margin-top:4px"><div class="bc-fl">Sıra / Grup</div><div class="bc-fv">10 · B</div></div></div>
+            </div>
+            <div style="margin-top:8px;font-size:10px;color:#aaa;">Kabin bagajı yok · SEAT FLEX</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="detail-overlay" id="detailScience">
+        <div class="detail-header">
+          <button class="back-btn" onclick="closeDetail('detailScience')"><svg viewBox="0 0 24 24"><polyline points="15,18 9,12 15,6"/></svg></button>
+          <div><div class="detail-title">Science Museum</div><div class="detail-sub">5 Nisan · 10:30</div></div>
+        </div>
+        <div class="detail-content">
+          <div class="map-ph"><div class="map-grid"></div><div class="map-content"><span>📍</span><span class="map-label">Exhibition Road, SW7 2DD</span></div></div>
+          <div class="museum-card">
+            <div class="museum-header"><span class="museum-name">Museum Admission</span><span class="museum-date">5 Nisan 2026</span></div>
+            <div style="font-size:11px;color:#666;margin-bottom:8px;">Sipariş: #16216488</div>
+            <div class="ticket-list">
+              <div class="ticket-item"><div><div class="ti-type">Yetişkin</div><div class="ti-time">10:30–11:00</div></div><span class="ti-badge ti-adult">#38683097</span></div>
+              <div class="ticket-item"><div><div class="ti-type">Yetişkin</div><div class="ti-time">10:30–11:00</div></div><span class="ti-badge ti-adult">#38683096</span></div>
+              <div class="ticket-item"><div><div class="ti-type">Çocuk</div><div class="ti-time">10:30–11:00</div></div><span class="ti-badge ti-child">#38683095</span></div>
+            </div>
+          </div>
+          <div class="info-box ib-blue"><div class="ib-label blue-text">Sonraki durak</div><div class="ib-text">Natural History Museum yürüyerek ~5 dk. Öğle arası vermek için Hyde Park idealdir.</div></div>
+        </div>
+      </div>
+
+      <div class="detail-overlay" id="detailNHM">
+        <div class="detail-header">
+          <button class="back-btn" onclick="closeDetail('detailNHM')"><svg viewBox="0 0 24 24"><polyline points="15,18 9,12 15,6"/></svg></button>
+          <div><div class="detail-title">Natural History Museum</div><div class="detail-sub">5 Nisan · 12:30 · Wildlife Photographer</div></div>
+        </div>
+        <div class="detail-content">
+          <div class="map-ph"><div class="map-grid"></div><div class="map-content"><span>📍</span><span class="map-label">Cromwell Road, SW7 5BD</span></div></div>
+          <div class="museum-card">
+            <div class="museum-header"><span class="museum-name">Wildlife Photographer of the Year</span><span class="museum-date">5 Nisan 2026</span></div>
+            <div style="font-size:11px;color:#666;margin-bottom:8px;">Sipariş: #7149331 · Müze girişi dahil</div>
+            <div class="ticket-list">
+              <div class="ticket-item"><div><div class="ti-type">Yetişkin</div><div class="ti-time">12:30</div></div><span class="ti-badge ti-adult">...750137</span></div>
+              <div class="ticket-item"><div><div class="ti-type">Yetişkin</div><div class="ti-time">12:30</div></div><span class="ti-badge ti-adult">...750138</span></div>
+              <div class="ticket-item"><div><div class="ti-type">4 Yaş Altı</div><div class="ti-time">12:30</div></div><span class="ti-badge ti-under4">...750141</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="detail-overlay" id="detailBritish">
+        <div class="detail-header">
+          <button class="back-btn" onclick="closeDetail('detailBritish')"><svg viewBox="0 0 24 24"><polyline points="15,18 9,12 15,6"/></svg></button>
+          <div><div class="detail-title">British Museum</div><div class="detail-sub">6 Nisan · 13:10 · Ücretsiz giriş</div></div>
+        </div>
+        <div class="detail-content">
+          <div class="map-ph"><div class="map-grid"></div><div class="map-content"><span>📍</span><span class="map-label">Great Russell St, WC1B 3DG</span></div></div>
+          <div class="museum-card">
+            <div class="museum-header"><span class="museum-name">General Admission</span><span class="museum-date">6 Nisan 2026</span></div>
+            <div style="font-size:11px;color:#666;margin-bottom:8px;">Sipariş: #9269197</div>
+            <div class="ticket-list">
+              <div class="ticket-item"><div><div class="ti-type">Standart</div><div class="ti-time">13:10 · EMRE AYANOGLU</div></div><span class="ti-badge ti-adult">#116305622</span></div>
+              <div class="ticket-item"><div><div class="ti-type">Standart</div><div class="ti-time">13:10 · EMRE AYANOGLU</div></div><span class="ti-badge ti-adult">#116305623</span></div>
+              <div class="ticket-item"><div><div class="ti-type">Çocuk (4-15)</div><div class="ti-time">13:10</div></div><span class="ti-badge ti-child">#116305621</span></div>
+            </div>
+          </div>
+          <div class="info-box ib-orange"><div class="ib-label orange-text">Önemli</div><div class="ib-text">Tekerlekli bavul ve büyük bagajlar müzeye alınmıyor.</div></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+const days = {
+  d3: {
+    label: '3 Nisan, Cuma', sub: 'Varış günü · Westminster turu', cls: 'dh-3',
+    stops: [
+      { name: 'Hotel Riu Plaza London Victoria', addr: '1 Neathouse Pl, SW1V 1LH', tag: 'Konaklama', dot: 'dot-hotel', tagCls: 'tag-hotel', detail: null },
+      { name: 'Westminster Abbey', addr: "Dean's Yard, London", tag: 'Tarihi', dot: 'dot-sight', tagCls: 'tag-sight', detail: null },
+      { name: 'Big Ben & Parlamento', addr: 'London SW1A 0AA', tag: 'Tarihi', dot: 'dot-sight', tagCls: 'tag-sight', detail: null },
+      { name: 'London Eye', addr: 'Riverside Building, County Hall', tag: 'Eğlence', dot: 'dot-sight', tagCls: 'tag-sight', detail: null },
+      { name: 'Southbank Centre', addr: 'Belvedere Rd, SE1 8XX', tag: 'Kültür', dot: 'dot-sight', tagCls: 'tag-sight', detail: null },
+      { name: 'Waterloo Bridge', addr: 'London WC2N 6NU', tag: 'Manzara', dot: 'dot-sight', tagCls: 'tag-sight', detail: null },
+      { name: 'Somerset House', addr: 'Strand, London WC2R', tag: 'Kültür', dot: 'dot-sight', tagCls: 'tag-sight', detail: null },
+      { name: "Cleopatra's Needle", addr: 'London WC2N 6NU', tag: 'Tarihi', dot: 'dot-sight', tagCls: 'tag-sight', detail: null },
+      { name: "King's College Waterloo Campus", addr: 'Stamford St, SE1 9NH', tag: 'Üniversite', dot: 'dot-end', tagCls: 'tag-sight', detail: null },
+    ]
+  },
+  d4: {
+    label: '4 Nisan, Cumartesi', sub: 'Saray · Soho · Chinatown', cls: 'dh-4',
+    stops: [
+      { name: 'Hotel Riu Plaza London Victoria', addr: '1 Neathouse Pl, SW1V 1LH', tag: 'Konaklama', dot: 'dot-hotel', tagCls: 'tag-hotel', detail: null },
+      { name: 'Eggslut Victoria', addr: '191 Victoria St, London', tag: 'Kahvaltı', dot: 'dot-food', tagCls: 'tag-food', detail: null },
+      { name: 'Buckingham Sarayı', addr: 'London SW1A 1AA', tag: 'Tarihi', dot: 'dot-sight', tagCls: 'tag-sight', detail: null },
+      { name: 'Downing Street', addr: 'London, SW1A 2AA', tag: 'Tarihi', dot: 'dot-sight', tagCls: 'tag-sight', detail: null },
+      { name: 'One Whitehall Place', addr: '1 Whitehall Pl, London', tag: 'Mimari', dot: 'dot-sight', tagCls: 'tag-sight', detail: null },
+      { name: 'Covent Garden', addr: 'Londra, WC2E 8RF', tag: 'Alışveriş', dot: 'dot-sight', tagCls: 'tag-sight', detail: null },
+      { name: 'Trafalgar Meydanı', addr: 'Trafalgar Sq, London', tag: 'Meydan', dot: 'dot-sight', tagCls: 'tag-sight', detail: null },
+      { name: "Nelson's Column", addr: 'A400 Trafalgar Square', tag: 'Anıt', dot: 'dot-sight', tagCls: 'tag-sight', detail: null },
+      { name: 'Piccadilly Circus', addr: 'London, W1J 9HS', tag: 'Meydan', dot: 'dot-sight', tagCls: 'tag-sight', detail: null },
+      { name: 'Shaftesbury Memorial Fountain', addr: 'Piccadilly Circus', tag: 'Anıt', dot: 'dot-sight', tagCls: 'tag-sight', detail: null },
+      { name: 'Regent Street', addr: 'London, W1B 2HQ', tag: 'Alışveriş', dot: 'dot-sight', tagCls: 'tag-sight', detail: null },
+      { name: 'Oxford Street', addr: 'London, W1C 2JL', tag: 'Alışveriş', dot: 'dot-sight', tagCls: 'tag-sight', detail: null },
+      { name: 'Soho', addr: 'Londra, W1D', tag: 'Semt', dot: 'dot-sight', tagCls: 'tag-sight', detail: null },
+      { name: 'Chinatown', addr: 'Londra W1D 5QA', tag: 'Akşam yemeği', dot: 'dot-end', tagCls: 'tag-food', detail: null },
+    ]
+  },
+  d5: {
+    label: '5 Nisan, Pazar', sub: 'Müze günü · South Kensington', cls: 'dh-5',
+    stops: [
+      { name: 'Hotel Riu Plaza London Victoria', addr: '1 Neathouse Pl, SW1V 1LH', tag: 'Konaklama', dot: 'dot-hotel', tagCls: 'tag-hotel', detail: null },
+      { name: 'Science Museum', addr: 'Exhibition Rd, South Kensington', tag: '10:30 · Bilet', dot: 'dot-museum', tagCls: 'tag-ticket', detail: 'detailScience' },
+      { name: 'Natural History Museum', addr: 'Cromwell Rd, SW7 5BD', tag: '12:30 · Bilet', dot: 'dot-museum', tagCls: 'tag-ticket', detail: 'detailNHM' },
+      { name: 'Hyde Park', addr: 'London, W2 2UH', tag: 'Park', dot: 'dot-park', tagCls: 'tag-park', detail: null },
+      { name: 'Kensington Gardens', addr: 'London, W2 2UH', tag: 'Park', dot: 'dot-end', tagCls: 'tag-park', detail: null },
+    ]
+  },
+  d6: {
+    label: '6 Nisan, Pazartesi', sub: 'Thames turu · South Bank', cls: 'dh-6',
+    stops: [
+      { name: 'Hotel Riu Plaza London Victoria', addr: '1 Neathouse Pl, SW1V 1LH', tag: 'Konaklama', dot: 'dot-hotel', tagCls: 'tag-hotel', detail: null },
+      { name: 'Tate Modern', addr: 'Bankside, London SE1 9TG', tag: 'Sanat', dot: 'dot-museum', tagCls: 'tag-museum', detail: null },
+      { name: 'Londra Köprüsü', addr: 'London EC4R 3TN', tag: 'Manzara', dot: 'dot-sight', tagCls: 'tag-sight', detail: null },
+      { name: 'Tower of London', addr: 'London EC3N 4AB', tag: 'Tarihi', dot: 'dot-sight', tagCls: 'tag-sight', detail: null },
+      { name: 'Borough Market', addr: 'London SE1 9AH', tag: 'Pazar', dot: 'dot-food', tagCls: 'tag-food', detail: null },
+      { name: "St Paul's Katedrali", addr: "St Paul's Churchyard, EC4", tag: '13:10 · Bilet', dot: 'dot-end', tagCls: 'tag-ticket', detail: 'detailBritish' },
+    ]
+  }
+};
+
+const flightStop = { name: 'Gidiş Uçuşu · PC 1161', addr: 'SAW 11:35 → STN 13:35 · Biniş 10:50', tag: 'Bilet', dot: 'dot-hotel', tagCls: 'tag-ticket', detail: 'detailFlight' };
+
+function buildStop(s, isLast) {
+  return `<div class="stop-card" onclick="${s.detail ? `openDetail('${s.detail}')` : ''}">
+    <div class="stop-line">
+      <div class="stop-dot ${s.dot}"></div>
+      ${isLast ? '' : '<div class="stop-connector"></div>'}
+    </div>
+    <div class="stop-body">
+      <div class="stop-name">${s.name}</div>
+      <div class="stop-addr">${s.addr}</div>
+      <span class="stop-tag ${s.tagCls}">${s.tag}${s.detail ? ' →' : ''}</span>
+    </div>
+  </div>`;
+}
+
+function buildDay(key) {
+  const d = days[key];
+  let h = `<div class="day-header"><div class="day-num ${d.cls}">${key === 'd3' ? '3' : key === 'd4' ? '4' : key === 'd5' ? '5' : '6'}</div><div class="day-info"><h3>${d.label}</h3><p>${d.sub}</p></div></div>`;
+  if (key === 'd3') h += buildStop(flightStop, false);
+  d.stops.forEach((s, i) => { h += buildStop(s, i === d.stops.length - 1); });
+  return h;
+}
+
+function buildTickets() {
+  return `<div style="padding:8px 0">
+    <div style="color:#777;font-size:11px;letter-spacing:1px;text-transform:uppercase;margin-bottom:12px;">3 Nisan · Uçuş</div>
+    <div class="stop-card" onclick="openDetail('detailFlight')"><div class="stop-line"><div class="stop-dot dot-hotel"></div></div><div class="stop-body"><div class="stop-name">PC 1161 · SAW → STN</div><div class="stop-addr">3 yolcu · Koltuk 9A/9B/9C · PNR: 1KQLEK</div><span class="stop-tag tag-ticket">Biniş kartları →</span></div></div>
+    <div style="color:#777;font-size:11px;letter-spacing:1px;text-transform:uppercase;margin:16px 0 12px">5 Nisan · Müzeler</div>
+    <div class="stop-card" onclick="openDetail('detailScience')"><div class="stop-line"><div class="stop-dot dot-museum"></div></div><div class="stop-body"><div class="stop-name">Science Museum</div><div class="stop-addr">5 Nisan · 10:30 · 3 bilet · #16216488</div><span class="stop-tag tag-ticket">Biletler →</span></div></div>
+    <div class="stop-card" onclick="openDetail('detailNHM')"><div class="stop-line"><div class="stop-dot dot-museum"></div></div><div class="stop-body"><div class="stop-name">Natural History Museum</div><div class="stop-addr">5 Nisan · 12:30 · 3 bilet · #7149331</div><span class="stop-tag tag-ticket">Biletler →</span></div></div>
+    <div style="color:#777;font-size:11px;letter-spacing:1px;text-transform:uppercase;margin:16px 0 12px">6 Nisan · Müze</div>
+    <div class="stop-card" onclick="openDetail('detailBritish')"><div class="stop-line"><div class="stop-dot dot-museum"></div></div><div class="stop-body"><div class="stop-name">British Museum</div><div class="stop-addr">6 Nisan · 13:10 · 3 bilet · #9269197</div><span class="stop-tag tag-ticket">Biletler →</span></div></div>
+  </div>`;
+}
+
+function render(filter) {
+  const area = document.getElementById('scrollArea');
+  let html = '';
+  if (filter === 'all') { ['d3','d4','d5','d6'].forEach(k => { html += buildDay(k); }); }
+  else if (filter === 'tickets') { html = buildTickets(); }
+  else { html = buildDay(filter); }
+  area.innerHTML = html;
+}
+
+function setTab(el, filter) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  render(filter);
+  document.getElementById('scrollArea').scrollTop = 0;
+}
+
+function openDetail(id) { document.getElementById(id).classList.add('open'); }
+function closeDetail(id) { document.getElementById(id).classList.remove('open'); }
+
+render('all');
+</script>
